@@ -13,7 +13,7 @@ def LoadTexture(image_path: str) -> int:
         Texture ID, or 0 if failed
     """
     try:
-        # Load image
+        
         image_surface = pg.image.load(image_path)
         
         # Get image dimensions
