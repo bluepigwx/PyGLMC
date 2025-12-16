@@ -1,42 +1,66 @@
 import pygame as pg
 from OpenGL.GL import *
 import glm
-
-VertexShaderSource = """#version 330 core
-layout (location=0) in vec3 aPos;
-
-void main()
-{
-    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0f);
-}
-"""
+from Shader import *
 
 
-FragmentShaderSource = """#version 330 core
-out vec4 FragmentColor;
-void main()
-{
-    FragmentColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
-}
-"""
-
-
-# 创建着色器
-def CreateShader(ShaderCode: str, ShaderType: int)->int:
-    ShaderHandle = glCreateShader(ShaderType)
-    glShaderSource(ShaderHandle, ShaderCode)
-    glCompileShader(ShaderHandle)
-
-    Success = glGetShaderiv(ShaderHandle, GL_COMPILE_STATUS)
-    if not Success:
-        ErrorInfo = glGetShaderInfoLog(ShaderHandle)
-        ShaderTypeName = "Vertex" if ShaderType == GL_VERTEX_SHADER else "Fragment"
-        print(f"Create {ShaderTypeName} Shader failed: {ErrorInfo.decode()}")
-        glDeleteShader(ShaderHandle)
-        return -1
-
-    return ShaderHandle
-
+def LoadTexture(image_path: str) -> int:
+    """
+    Args:
+        image_path: Path to the image file
+        
+    Returns:
+        Texture ID, or 0 if failed
+    """
+    try:
+        # Load image
+        image_surface = pg.image.load(image_path)
+        
+        # Get image dimensions
+        width = image_surface.get_width()
+        height = image_surface.get_height()
+        
+        # Convert to RGBA format
+        image_surface = image_surface.convert_alpha()
+        
+        # Get image data (flip Y axis for OpenGL)
+        image_data = pg.image.tostring(image_surface, "RGBA", True)
+        
+        # Generate texture
+        texture_id = glGenTextures(1)
+        glBindTexture(GL_TEXTURE_2D, texture_id)
+        
+        # Set texture parameters
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        
+        # Upload texture data to GPU
+        glTexImage2D(
+            GL_TEXTURE_2D,
+            0,
+            GL_RGBA,
+            width,
+            height,
+            0,
+            GL_RGBA,
+            GL_UNSIGNED_BYTE,
+            image_data
+        )
+        
+        # Generate mipmaps
+        glGenerateMipmap(GL_TEXTURE_2D)
+        
+        # Unbind texture
+        glBindTexture(GL_TEXTURE_2D, 0)
+        
+        print(f"Texture loaded: {image_path} ({width}x{height})")
+        return texture_id
+        
+    except Exception as e:
+        print(f"Failed to load texture {image_path}: {e}")
+        return 0
 
 
 class SDLApp:
@@ -50,54 +74,55 @@ class SDLApp:
 
         self.clock = pg.time.Clock()
 
-    
+
     def SetupRender(self):
         glClearColor(0.1, 0.1, 0.1, 1)
+
+        self.TriangleShader = Shader("Shaders/VertexShader.vs", "Shaders/FragmentShader.fs")
+        if not self.TriangleShader.IsValid:
+            raise RuntimeError(f"Create Shader failed")
         
-        VSHandle = CreateShader(VertexShaderSource, GL_VERTEX_SHADER)
-        FSHandle = CreateShader(FragmentShaderSource, GL_FRAGMENT_SHADER)
-        if (VSHandle < 0 or FSHandle < 0):
-            if VSHandle < 0:
-                glDeleteShader(FSHandle)
-            
-            if FSHandle < 0:
-                glDeleteShader(VSHandle)
-
-            raise Exception(f"Create Shader Failed VS{VSHandle} FS{FSHandle}")
-
-        ShaderProgram = glCreateProgram()
-        glAttachShader(ShaderProgram, VSHandle)
-        glAttachShader(ShaderProgram, FSHandle)
-        glLinkProgram(ShaderProgram)
-        Success = glGetProgramiv(ShaderProgram, GL_LINK_STATUS)
-
-        glDeleteShader(VSHandle)
-        glDeleteShader(FSHandle)
-
-        if (not Success):
-            ErrorInfo = glGetProgramInfoLog(ShaderProgram)
-            raise Exception(f"Link Program Failed {ErrorInfo.decode()}")
-        
-        self.ShaderProgram = ShaderProgram
-
-        # 构建三角形
+        # 构建四边角形
         Vertices = glm.array(glm.float32,
-                             -0.5, -0.5, 0.0,
-                             0.5, -0.5, 0.0,
-                             0.0, 0.5, 0.0
+                             -0.5, -0.5, 0.0,   0.0, 0.0,
+                              0.5, -0.5, 0.0,   1.0, 0.0,
+                              0.5,  0.5, 0.0,   1.0, 1.0,
+                              -0.5, 0.5, 0.0,   0.0, 1.0
                              )
+        
+        Indices = glm.array(glm.uint32,
+                            0, 1, 2,
+                            0, 2, 3
+                            )
 
         self.VAOHandle = glGenVertexArrays(1)
         glBindVertexArray(self.VAOHandle)
 
+        # 多边形数据
         self.VBOHandle = glGenBuffers(1)
         glBindBuffer(GL_ARRAY_BUFFER, self.VBOHandle)
         glBufferData(GL_ARRAY_BUFFER, Vertices.nbytes, Vertices.ptr, GL_STATIC_DRAW)
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*glm.sizeof(glm.float32), None)
+
+        self.EBOHandle = glGenBuffers(1)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.EBOHandle)
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, Indices.nbytes, Indices.ptr, GL_STATIC_DRAW)
+
+        # Position attribute (location = 0)
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5*glm.sizeof(glm.float32), None)
         glEnableVertexAttribArray(0)
+
+        # Texture coordinate attribute (location = 1)
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5*glm.sizeof(glm.float32), 
+                            ctypes.c_void_p(3*glm.sizeof(glm.float32)))
+        glEnableVertexAttribArray(1)
 
         glBindBuffer(GL_ARRAY_BUFFER, 0)
         glBindVertexArray(0)
+
+        # Load texture
+        self.TextureHandle = LoadTexture("texture.png")
+        if self.TextureHandle == 0:
+            print("Warning: Failed to load texture, using default color")
 
 
     def BeginRender(self):
@@ -109,15 +134,22 @@ class SDLApp:
 
 
     def Draw(self):
-        glUseProgram(self.ShaderProgram)
+
+        self.TriangleShader.Use()
+        # 使用Shader中的unifor变量一定要先use shader
+        self.TriangleShader.Uniform4f("OurColor", 1.0, 1.0, 1.0, 1.0)
+
+        # Bind texture
+        if self.TextureHandle > 0:
+            glActiveTexture(GL_TEXTURE0)
+            glBindTexture(GL_TEXTURE_2D, self.TextureHandle)
+
         glBindVertexArray(self.VAOHandle)
-        glDrawArrays(GL_TRIANGLES, 0, 3)
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, None)
 
 
     def Run(self):
         Running = True
-
-        self.SetupRender()
 
         while Running:
             for event in pg.event.get():
@@ -131,11 +163,32 @@ class SDLApp:
             self.EndRender()
 
             self.clock.tick(60)
+
+
+    def Finish(self):
+        glDeleteVertexArrays(1, (self.VAOHandle,))
+        glDeleteBuffers(1, (self.VBOHandle,))
+        glDeleteBuffers(1, (self.EBOHandle,))
         
+        if hasattr(self, 'TextureHandle') and self.TextureHandle > 0:
+            glDeleteTextures(1, (self.TextureHandle,))
+        
+        self.TriangleShader.Release()
+
         pg.quit()
 
 
 
 if __name__ == "__main__":
-    app = SDLApp()
-    app.Run()
+
+    try:
+        app = SDLApp()
+
+        app.SetupRender()
+
+        app.Run()
+    except Exception as e:
+        print(str(e))
+
+    finally:
+        app.Finish()
