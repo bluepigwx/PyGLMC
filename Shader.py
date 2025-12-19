@@ -1,4 +1,5 @@
 from OpenGL.GL import *
+import glm
 
 # 一个Shader需要同时包含顶点着色器和片段着色器
 
@@ -116,6 +117,28 @@ class Shader:
             raise RuntimeError(f"Uniform {name} not found in this shader")
         
         glUniform4f(Location, a, b, c, d)
+
+    
+    def Uniform1i(self, name:str, a:int):
+        if not self.IsValid:
+            raise RuntimeError(f"Shader is not valid when Uniform4f")
+        
+        Location = glGetUniformLocation(self.ShaderProgram, name)
+        if Location < 0 :
+            raise RuntimeError(f"Unifom {name} not found in this shader")
+        
+        glUniform1i(Location, a)
+
+    
+    def UniformMat4fv(self, name:str, mat4):
+        if not self.IsValid:
+            raise RuntimeError(f"Shader is not valid")
+        
+        Location = glGetUniformLocation(self.ShaderProgram, name)
+        if Location < 0:
+            raise RuntimeError(f"Uniform {name} not found")
+        
+        glUniformMatrix4fv(Location, 1, GL_FALSE, glm.value_ptr(mat4))
 
 
     def Release(self):

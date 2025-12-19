@@ -16,21 +16,17 @@ def LoadTexture(image_path: str) -> int:
         
         image_surface = pg.image.load(image_path)
         
-        # Get image dimensions
         width = image_surface.get_width()
         height = image_surface.get_height()
         
-        # Convert to RGBA format
         image_surface = image_surface.convert_alpha()
         
-        # Get image data (flip Y axis for OpenGL)
         image_data = pg.image.tostring(image_surface, "RGBA", True)
         
         # Generate texture
         texture_id = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, texture_id)
         
-        # Set texture parameters
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
@@ -94,6 +90,50 @@ class SDLApp:
                             0, 1, 2,
                             0, 2, 3
                             )
+        
+        Vertices2 = glm.array(glm.float32,
+        -0.5, -0.5, -0.5,  0.0, 0.0,
+         0.5, -0.5, -0.5,  1.0, 0.0,
+         0.5,  0.5, -0.5,  1.0, 1.0,
+         0.5,  0.5, -0.5,  1.0, 1.0,
+        -0.5,  0.5, -0.5,  0.0, 1.0,
+        -0.5, -0.5, -0.5,  0.0, 0.0,
+
+        -0.5, -0.5,  0.5,  0.0, 0.0,
+         0.5, -0.5,  0.5,  1.0, 0.0,
+         0.5,  0.5,  0.5,  1.0, 1.0,
+         0.5,  0.5,  0.5,  1.0, 1.0,
+        -0.5,  0.5,  0.5,  0.0, 1.0,
+        -0.5, -0.5,  0.5,  0.0, 0.0,
+
+        -0.5,  0.5,  0.5,  1.0, 0.0,
+        -0.5,  0.5, -0.5,  1.0, 1.0,
+        -0.5, -0.5, -0.5,  0.0, 1.0,
+        -0.5, -0.5, -0.5,  0.0, 1.0,
+        -0.5, -0.5,  0.5,  0.0, 0.0,
+        -0.5,  0.5,  0.5,  1.0, 0.0,
+
+         0.5,  0.5,  0.5,  1.0, 0.0,
+         0.5,  0.5, -0.5,  1.0, 1.0,
+         0.5, -0.5, -0.5,  0.0, 1.0,
+         0.5, -0.5, -0.5,  0.0, 1.0,
+         0.5, -0.5,  0.5,  0.0, 0.0,
+         0.5,  0.5,  0.5,  1.0, 0.0,
+
+        -0.5, -0.5, -0.5,  0.0, 1.0,
+         0.5, -0.5, -0.5,  1.0, 1.0,
+         0.5, -0.5,  0.5,  1.0, 0.0,
+         0.5, -0.5,  0.5,  1.0, 0.0,
+        -0.5, -0.5,  0.5,  0.0, 0.0,
+        -0.5, -0.5, -0.5,  0.0, 1.0,
+
+        -0.5,  0.5, -0.5,  0.0, 1.0,
+         0.5,  0.5, -0.5,  1.0, 1.0,
+         0.5,  0.5,  0.5,  1.0, 0.0,
+         0.5,  0.5,  0.5,  1.0, 0.0,
+        -0.5,  0.5,  0.5,  0.0, 0.0,
+        -0.5,  0.5, -0.5,  0.0, 1.0
+        )
 
         self.VAOHandle = glGenVertexArrays(1)
         glBindVertexArray(self.VAOHandle)
@@ -101,7 +141,7 @@ class SDLApp:
         # 多边形数据
         self.VBOHandle = glGenBuffers(1)
         glBindBuffer(GL_ARRAY_BUFFER, self.VBOHandle)
-        glBufferData(GL_ARRAY_BUFFER, Vertices.nbytes, Vertices.ptr, GL_STATIC_DRAW)
+        glBufferData(GL_ARRAY_BUFFER, Vertices2.nbytes, Vertices2.ptr, GL_STATIC_DRAW)
 
         self.EBOHandle = glGenBuffers(1)
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.EBOHandle)
@@ -120,13 +160,19 @@ class SDLApp:
         glBindVertexArray(0)
 
         # Load texture
-        self.TextureHandle = LoadTexture("texture.png")
+        self.TextureHandle = LoadTexture("Pic/Wall.png")
         if self.TextureHandle == 0:
-            print("Warning: Failed to load texture, using default color")
+            raise RuntimeError(f"Load Pic Wall failed")
+
+        self.TextureHandle1 = LoadTexture("Pic/Rock.png")
+        if self.TextureHandle1 == 0:
+            raise RuntimeError(f"Load Pic Rock failed")
+        
+        glEnable(GL_DEPTH_TEST)
 
 
     def BeginRender(self):
-        glClear(GL_COLOR_BUFFER_BIT)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
 
     def EndRender(self):
@@ -135,17 +181,53 @@ class SDLApp:
 
     def Draw(self):
 
-        self.TriangleShader.Use()
+        CubePositions = [
+        glm.vec3( 0.0,  0.0,  0.0),
+        glm.vec3( 2.0,  5.0, -15.0),
+        glm.vec3(-1.5, -2.2, -2.5),
+        glm.vec3(-3.8, -2.0, -12.3),
+        glm.vec3( 2.4, -0.4, -3.5),
+        glm.vec3(-1.7,  3.0, -7.5),
+        glm.vec3( 1.3, -2.0, -2.5),
+        glm.vec3( 1.5,  2.0, -2.5),
+        glm.vec3( 1.5,  0.2, -1.5),
+        glm.vec3(-1.3,  1.0, -1.5)
+        ]
+
         # 使用Shader中的unifor变量一定要先use shader
-        self.TriangleShader.Uniform4f("OurColor", 1.0, 1.0, 1.0, 1.0)
+        self.TriangleShader.Use()
+        self.TriangleShader.Uniform1i("TextureUnit0", 0)
+        self.TriangleShader.Uniform1i("TextureUnit1", 1)
+
+        # self.TriangleShader.Uniform4f("OurColor", 1.0, 1.0, 1.0, 1.0)
 
         # Bind texture
-        if self.TextureHandle > 0:
-            glActiveTexture(GL_TEXTURE0)
-            glBindTexture(GL_TEXTURE_2D, self.TextureHandle)
+        glActiveTexture(GL_TEXTURE0)
+        glBindTexture(GL_TEXTURE_2D, self.TextureHandle)
 
-        glBindVertexArray(self.VAOHandle)
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, None)
+        glActiveTexture(GL_TEXTURE1)
+        glBindTexture(GL_TEXTURE_2D, self.TextureHandle1)
+
+        for i in range(len(CubePositions)):
+            
+            Model = glm.mat4(1.0)
+            View = glm.mat4(1.0)
+            Projection = glm.mat4(1.0)
+
+            Rotation = pg.time.get_ticks() / 1000
+            Model = glm.translate(Model, CubePositions[i])
+            Model = glm.rotate(Model, Rotation, glm.vec3(0.0, 1.0, 1.0))
+            View = glm.translate(View, glm.vec3(0.0, 0.0, -5.0))
+            Projection = glm.perspective(glm.radians(45.0), 1024 / 768, 0.1, 100.0)
+ 
+            self.TriangleShader.UniformMat4fv("Model", Model)
+            self.TriangleShader.UniformMat4fv("View", View)
+            self.TriangleShader.UniformMat4fv("Projection", Projection)
+
+            glBindVertexArray(self.VAOHandle)
+            glDrawArrays(GL_TRIANGLES, 0, 36)
+        
+        #glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, None)
 
 
     def Run(self):
