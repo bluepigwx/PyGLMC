@@ -1,0 +1,27 @@
+
+import glm
+
+#相机相关
+SCREEN_WIDHT = 1024
+SCREEN_HEIGHT = 768
+NEAR_CULL = 0.1
+FAR_CULL = 2000.0
+FOV_DEG = 50
+V_FOV = glm.radians(FOV_DEG)  # vertical FOV
+PITCH_MAX = glm.radians(89)
+
+# 角色相关
+MOVE_SPEED = 0.005
+
+
+# 一个Chunk自身的配置相关
+CHUNK_SIZE = 32
+H_CHUNK_SIZE = CHUNK_SIZE // 2
+CHUNK_AREA = CHUNK_SIZE * CHUNK_SIZE
+CHUNK_VOL = CHUNK_AREA * CHUNK_SIZE
+
+# 场景构造相关，一个世界有多少个Chunk
+WORLD_W, WORLD_H = 10, 3
+WORLD_D = WORLD_W
+WORLD_AREA = WORLD_W * WORLD_D
+WORLD_VOL = WORLD_AREA * WORLD_H

@@ -2,6 +2,10 @@ import pygame as pg
 from OpenGL.GL import *
 import glm
 from Shader import *
+from Controller import *
+from Mesh import *
+from CubeMesh import *
+from TestContext import *
 
 
 def LoadTexture(image_path: str) -> int:
@@ -69,96 +73,17 @@ class SDLApp:
         pg.display.set_mode((1024, 768), pg.OPENGL|pg.DOUBLEBUF)
 
         self.clock = pg.time.Clock()
+        self.Ctl = Controller()
 
 
     def SetupRender(self):
         glClearColor(0.1, 0.1, 0.1, 1)
+        glEnable(GL_DEPTH_TEST)
 
-        self.TriangleShader = Shader("Shaders/VertexShader.vs", "Shaders/FragmentShader.fs")
-        if not self.TriangleShader.IsValid:
-            raise RuntimeError(f"Create Shader failed")
+        TestCxt = TestCubeCreateContext()
+        self.TestCube = CubeMesh()
+        self.TestCube.Setup(TestCxt)
         
-        # 构建四边角形
-        Vertices = glm.array(glm.float32,
-                             -0.5, -0.5, 0.0,   0.0, 0.0,
-                              0.5, -0.5, 0.0,   1.0, 0.0,
-                              0.5,  0.5, 0.0,   1.0, 1.0,
-                              -0.5, 0.5, 0.0,   0.0, 1.0
-                             )
-        
-        Indices = glm.array(glm.uint32,
-                            0, 1, 2,
-                            0, 2, 3
-                            )
-        
-        Vertices2 = glm.array(glm.float32,
-        -0.5, -0.5, -0.5,  0.0, 0.0,
-         0.5, -0.5, -0.5,  1.0, 0.0,
-         0.5,  0.5, -0.5,  1.0, 1.0,
-         0.5,  0.5, -0.5,  1.0, 1.0,
-        -0.5,  0.5, -0.5,  0.0, 1.0,
-        -0.5, -0.5, -0.5,  0.0, 0.0,
-
-        -0.5, -0.5,  0.5,  0.0, 0.0,
-         0.5, -0.5,  0.5,  1.0, 0.0,
-         0.5,  0.5,  0.5,  1.0, 1.0,
-         0.5,  0.5,  0.5,  1.0, 1.0,
-        -0.5,  0.5,  0.5,  0.0, 1.0,
-        -0.5, -0.5,  0.5,  0.0, 0.0,
-
-        -0.5,  0.5,  0.5,  1.0, 0.0,
-        -0.5,  0.5, -0.5,  1.0, 1.0,
-        -0.5, -0.5, -0.5,  0.0, 1.0,
-        -0.5, -0.5, -0.5,  0.0, 1.0,
-        -0.5, -0.5,  0.5,  0.0, 0.0,
-        -0.5,  0.5,  0.5,  1.0, 0.0,
-
-         0.5,  0.5,  0.5,  1.0, 0.0,
-         0.5,  0.5, -0.5,  1.0, 1.0,
-         0.5, -0.5, -0.5,  0.0, 1.0,
-         0.5, -0.5, -0.5,  0.0, 1.0,
-         0.5, -0.5,  0.5,  0.0, 0.0,
-         0.5,  0.5,  0.5,  1.0, 0.0,
-
-        -0.5, -0.5, -0.5,  0.0, 1.0,
-         0.5, -0.5, -0.5,  1.0, 1.0,
-         0.5, -0.5,  0.5,  1.0, 0.0,
-         0.5, -0.5,  0.5,  1.0, 0.0,
-        -0.5, -0.5,  0.5,  0.0, 0.0,
-        -0.5, -0.5, -0.5,  0.0, 1.0,
-
-        -0.5,  0.5, -0.5,  0.0, 1.0,
-         0.5,  0.5, -0.5,  1.0, 1.0,
-         0.5,  0.5,  0.5,  1.0, 0.0,
-         0.5,  0.5,  0.5,  1.0, 0.0,
-        -0.5,  0.5,  0.5,  0.0, 0.0,
-        -0.5,  0.5, -0.5,  0.0, 1.0
-        )
-
-        self.VAOHandle = glGenVertexArrays(1)
-        glBindVertexArray(self.VAOHandle)
-
-        # 多边形数据
-        self.VBOHandle = glGenBuffers(1)
-        glBindBuffer(GL_ARRAY_BUFFER, self.VBOHandle)
-        glBufferData(GL_ARRAY_BUFFER, Vertices2.nbytes, Vertices2.ptr, GL_STATIC_DRAW)
-
-        self.EBOHandle = glGenBuffers(1)
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.EBOHandle)
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, Indices.nbytes, Indices.ptr, GL_STATIC_DRAW)
-
-        # Position attribute (location = 0)
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5*glm.sizeof(glm.float32), None)
-        glEnableVertexAttribArray(0)
-
-        # Texture coordinate attribute (location = 1)
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5*glm.sizeof(glm.float32), 
-                            ctypes.c_void_p(3*glm.sizeof(glm.float32)))
-        glEnableVertexAttribArray(1)
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0)
-        glBindVertexArray(0)
-
         # Load texture
         self.TextureHandle = LoadTexture("Pic/Wall.png")
         if self.TextureHandle == 0:
@@ -168,9 +93,7 @@ class SDLApp:
         if self.TextureHandle1 == 0:
             raise RuntimeError(f"Load Pic Rock failed")
         
-        glEnable(GL_DEPTH_TEST)
-
-
+        
     def BeginRender(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
@@ -195,11 +118,9 @@ class SDLApp:
         ]
 
         # 使用Shader中的unifor变量一定要先use shader
-        self.TriangleShader.Use()
-        self.TriangleShader.Uniform1i("TextureUnit0", 0)
-        self.TriangleShader.Uniform1i("TextureUnit1", 1)
-
-        # self.TriangleShader.Uniform4f("OurColor", 1.0, 1.0, 1.0, 1.0)
+        self.TestCube.Program.Use()
+        self.TestCube.Program.Uniform1i("TextureUnit0", 0)
+        self.TestCube.Program.Uniform1i("TextureUnit1", 1)
 
         # Bind texture
         glActiveTexture(GL_TEXTURE0)
@@ -211,23 +132,17 @@ class SDLApp:
         for i in range(len(CubePositions)):
             
             Model = glm.mat4(1.0)
-            View = glm.mat4(1.0)
-            Projection = glm.mat4(1.0)
 
             Rotation = pg.time.get_ticks() / 1000
             Model = glm.translate(Model, CubePositions[i])
-            Model = glm.rotate(Model, Rotation, glm.vec3(0.0, 1.0, 1.0))
-            View = glm.translate(View, glm.vec3(0.0, 0.0, -5.0))
-            Projection = glm.perspective(glm.radians(45.0), 1024 / 768, 0.1, 100.0)
  
-            self.TriangleShader.UniformMat4fv("Model", Model)
-            self.TriangleShader.UniformMat4fv("View", View)
-            self.TriangleShader.UniformMat4fv("Projection", Projection)
-
-            glBindVertexArray(self.VAOHandle)
-            glDrawArrays(GL_TRIANGLES, 0, 36)
+            self.TestCube.Program.UniformMat4fv("Model", Model)
+  
+            self.TestCube.Render()
         
-        #glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, None)
+
+        self.TestCube.Program.UniformMat4fv("View", self.Ctl.Camare.ViewMat)
+        self.TestCube.Program.UniformMat4fv("Projection", self.Ctl.Camare.ProjecMat)
 
 
     def Run(self):
@@ -238,24 +153,33 @@ class SDLApp:
                 if event.type == pg.QUIT:
                     Running = False
 
+            delta = self.clock.tick()
+            self.Ctl.Update(delta)
+
             self.BeginRender()
 
             self.Draw()
 
             self.EndRender()
 
-            self.clock.tick(60)
+            #self.clock.tick(60)
 
 
     def Finish(self):
-        glDeleteVertexArrays(1, (self.VAOHandle,))
-        glDeleteBuffers(1, (self.VBOHandle,))
-        glDeleteBuffers(1, (self.EBOHandle,))
-        
+        # Clean up textures
         if hasattr(self, 'TextureHandle') and self.TextureHandle > 0:
             glDeleteTextures(1, (self.TextureHandle,))
         
-        self.TriangleShader.Release()
+        if hasattr(self, 'TextureHandle1') and self.TextureHandle1 > 0:
+            glDeleteTextures(1, (self.TextureHandle1,))
+        
+        # Clean up mesh resources (VAO, VBO are managed by TestCube)
+        if hasattr(self, 'TestCube') and hasattr(self.TestCube, 'VAO'):
+            glDeleteVertexArrays(1, (self.TestCube.VAO,))
+        
+        # Clean up shader program
+        if hasattr(self, 'TestCube') and hasattr(self.TestCube, 'Program'):
+            self.TestCube.Program.Release()
 
         pg.quit()
 

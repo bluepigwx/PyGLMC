@@ -108,6 +108,10 @@ class Shader:
         glUseProgram(self.ShaderProgram)
 
     
+    def GetAttribLocation(self, name):
+        return glGetAttribLocation(self.ShaderProgram, name)
+
+    
     def Uniform4f(self, name:str, a:float, b:float, c:float, d:float):
         if not self.IsValid:
             raise RuntimeError(f"Shader is not valid when Uniform4f")
