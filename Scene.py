@@ -19,6 +19,7 @@ class Scene:
                 for z in Config.WORLD_D:
                     ChunkIndex = x + Config.WORLD_W * z + Config.WORLD_AREA * y
                     NewChunk = Chunk(x, y, z)
+                    NewChunk.Scene = self
                     self.Chunks[ChunkIndex] = NewChunk
 
                     self.Voxels[ChunkIndex] = NewChunk.BuildVoxels()
