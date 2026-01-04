@@ -150,3 +150,4 @@ class Shader:
             glDeleteProgram(self.ShaderProgram)
             self.ShaderProgram = 0
             self.IsValid = False
+

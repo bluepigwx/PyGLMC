@@ -1,5 +1,6 @@
 from Mesh import *
 
+
 class ChunkMesh(Mesh):
     def __init__(self):
         pass

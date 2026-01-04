@@ -2,6 +2,7 @@
 import glm
 import Config
 
+
 class Camera:
     def __init__(self):
         aspect_ratio = Config.SCREEN_WIDHT / Config.SCREEN_HEIGHT

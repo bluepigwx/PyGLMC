@@ -77,3 +77,4 @@ class Controller:
         if Mouse_dy:
             self._RotatePitch(Mouse_dy * 0.002)
 
+

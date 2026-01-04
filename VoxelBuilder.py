@@ -22,3 +22,4 @@ class VexelBuilder:
                     voxels[x + Config.CHUNK_SIZE * z + Config.CHUNK_AREA * y] = wy + 1
         
         return voxels
+

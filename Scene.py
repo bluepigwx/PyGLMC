@@ -30,3 +30,4 @@ class Scene:
     def Render(self):
         for Chunk in self.Chunks:
             Chunk.Render()
+

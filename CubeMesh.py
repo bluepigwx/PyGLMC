@@ -12,3 +12,4 @@ class CubeMesh(Mesh):
     def Render(self):
         glBindVertexArray(self.VAO)
         glDrawArrays(GL_TRIANGLES, 0, 36)
+

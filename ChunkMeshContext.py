@@ -5,6 +5,7 @@ from Shader import *
 import Config
 
 
+
 class ChunkMeshContext(CreateMeshContext):
     def __init__(self, Chunk):
         super().__init__()
