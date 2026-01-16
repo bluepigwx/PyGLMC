@@ -45,10 +45,9 @@ class ChunkMeshContext(CreateMeshContext):
         return True
         
 
-        
 
     def GenVertices(self):
-        self.Vertices = np.empty(CHUNK_VOL * 18 * format_size, dtype='uint8')
+        self.Vertices = np.empty(Config.CHUNK_VOL * 18 * format_size, dtype='uint8')
         NumVerticeAttr = 0
 
         # 为每一个暴露在空气中没有被阻挡的体素格子生成顶点属性数据
@@ -67,11 +66,9 @@ class ChunkMeshContext(CreateMeshContext):
                     wy = y + cy * Config.CHUNK_SIZE
                     wz = z + cz * Config.CHUNK_SIZE
 
+                    if self.IsVoid():
+                         
 
-
-
-
-                    
 
 
     def GenShaderProgram(self):
