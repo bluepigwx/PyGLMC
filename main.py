@@ -6,6 +6,7 @@ from Controller import *
 from Mesh import *
 from CubeMesh import *
 from TestContext import *
+from Scene import *
 
 
 def LoadTexture(image_path: str) -> int:
@@ -75,6 +76,9 @@ class SDLApp:
         self.clock = pg.time.Clock()
         self.Ctl = Controller()
 
+        pg.event.set_grab(True)
+        pg.mouse.set_visible(False)
+
 
     def SetupRender(self):
         glClearColor(0.1, 0.1, 0.1, 1)
@@ -92,10 +96,15 @@ class SDLApp:
         self.TextureHandle1 = LoadTexture("Pic/Rock.png")
         if self.TextureHandle1 == 0:
             raise RuntimeError(f"Load Pic Rock failed")
+
+        self.Scene = Scene()
+        self.Scene.BuildChunk()
         
         
     def BeginRender(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+        glBindVertexArray(0)
 
 
     def EndRender(self):
@@ -145,6 +154,9 @@ class SDLApp:
         self.TestCube.Program.UniformMat4fv("Projection", self.Ctl.Camare.ProjecMat)
 
 
+    def Draw2(self):
+        self.Scene.Render()
+
     def Run(self):
         Running = True
 
@@ -158,7 +170,8 @@ class SDLApp:
 
             self.BeginRender()
 
-            self.Draw()
+            #self.Draw()
+            self.Draw2()
 
             self.EndRender()
 

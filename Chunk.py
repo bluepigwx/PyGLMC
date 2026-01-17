@@ -13,10 +13,10 @@ class Chunk:
     """
     管理世界中的一个区块的体素数据以及他们的mesh渲染
     """
-    def __init__(self, position):
+    def __init__(self, Scene, position):
         self.Voxels : np.array = None
         self.Mesh : ChunkMesh = None
-        self.Scene : Scene = None
+        self.Scene : Scene = Scene
         self.Position = position
         self.MatModel = glm.translate(glm.mat4(), glm.vec3(self.Position) * Config.CHUNK_SIZE)
 

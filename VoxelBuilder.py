@@ -3,12 +3,12 @@ import numpy as np
 import glm
 import Config
 
-class VexelBuilder:
+class VoxelBuilder:
     @staticmethod
-    def BuildVoxel(Position):
+    def BuildVoxel(ChunkPosition):
         voxels = np.zeros(Config.CHUNK_VOL, dtype="uint8")
 
-        cx, cy, cz = glm.ivec3(Position) * Config.CHUNK_SIZE
+        cx, cy, cz = glm.ivec3(ChunkPosition) * Config.CHUNK_SIZE
 
         for x in range(Config.CHUNK_SIZE):
             wx = x + cx

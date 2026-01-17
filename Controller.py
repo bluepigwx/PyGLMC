@@ -23,11 +23,13 @@ class Controller:
         self.KeyboradControle(delta)
         self.MouseControle()
 
+        # 单位向量在xz平面上实际投影长度cos(Pitch)再乘cos(Yaw)
         self.Forward.x = glm.cos(self.Yaw) * glm.cos(self.Pitch)
         self.Forward.y = glm.sin(self.Pitch)
+        # 单位向量在xz平面上实际投影长度cos(Pitch)再乘cos(Yaw
         self.Forward.z = glm.sin(self.Yaw) * glm.cos(self.Pitch)
         self.Forward = glm.normalize(self.Forward)
-
+        # 前向量与正上向量叉积得到垂直于前向量与正上向量平面垂直的右向量
         self.Right = glm.normalize(glm.cross(self.Forward, glm.vec3(0, 1, 0)))
         self.Up = glm.normalize(glm.cross(self.Right, self.Forward))
 

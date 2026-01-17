@@ -1,6 +1,7 @@
 from Mesh import *
 from OpenGL.GL import *
 
+
 class CubeMesh(Mesh):
     def __init__(self):
         pass

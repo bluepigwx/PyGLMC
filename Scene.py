@@ -10,18 +10,19 @@ class Scene:
     def __init__(self):
         # 场景的初始分区
         self.Chunks = [None for _ in Config.WORLD_VOL]
-        # 每个分区包含的体素数据，支持2^8种不同的体素类型
+        # 每个分区包含的体素数据，使用uint8支持2^8种不同的体素类型
+        # 初始化一个二维数组，用来按ChunkId为索引来存放场景中各个Chunk的体素
         self.Voxels = np.empty([Config.WORLD_VOL, Config.CHUNK_VOL], dtype="uint8")
 
-    def BuildChunk(self):
-        for x in Config.WORLD_W:
-            for y in Config.WORLD_H:
-                for z in Config.WORLD_D:
-                    ChunkIndex = x + Config.WORLD_W * z + Config.WORLD_AREA * y
-                    NewChunk = Chunk(x, y, z)
-                    NewChunk.Scene = self
-                    self.Chunks[ChunkIndex] = NewChunk
 
+    def BuildChunk(self):
+        for cx in Config.WORLD_CHUNK_W:
+            for cy in Config.WORLD_CHUNK_H:
+                for cz in Config.WORLD_CHUNK_D:
+                    ChunkIndex = cx + Config.WORLD_CHUNK_W * cz + Config.WORLD_AREA * cy
+                    NewChunk = Chunk(self, cx, cy, cz)
+                    self.Chunks[ChunkIndex] = NewChunk
+                    
                     self.Voxels[ChunkIndex] = NewChunk.BuildVoxels()
 
                     NewChunk.BuildMesh()
