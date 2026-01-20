@@ -1,214 +1,129 @@
 import pygame as pg
 from OpenGL.GL import *
 import glm
-from Shader import *
-from Controller import *
-from Mesh import *
-from CubeMesh import *
-from TestContext import *
-from Scene import *
+import config
+import texture_mgr
+import block_type
+import shader
+import camera
+import controller
 
 
-def LoadTexture(image_path: str) -> int:
-    """
-    Args:
-        image_path: Path to the image file
-        
-    Returns:
-        Texture ID, or 0 if failed
-    """
-    try:
-        
-        image_surface = pg.image.load(image_path)
-        
-        width = image_surface.get_width()
-        height = image_surface.get_height()
-        
-        image_surface = image_surface.convert_alpha()
-        
-        image_data = pg.image.tostring(image_surface, "RGBA", True)
-        
-        # Generate texture
-        texture_id = glGenTextures(1)
-        glBindTexture(GL_TEXTURE_2D, texture_id)
-        
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-        
-        # Upload texture data to GPU
-        glTexImage2D(
-            GL_TEXTURE_2D,
-            0,
-            GL_RGBA,
-            width,
-            height,
-            0,
-            GL_RGBA,
-            GL_UNSIGNED_BYTE,
-            image_data
-        )
-        
-        # Generate mipmaps
-        glGenerateMipmap(GL_TEXTURE_2D)
-        
-        # Unbind texture
-        glBindTexture(GL_TEXTURE_2D, 0)
-        
-        print(f"Texture loaded: {image_path} ({width}x{height})")
-        return texture_id
-        
-    except Exception as e:
-        print(f"Failed to load texture {image_path}: {e}")
-        return 0
-
-
-class SDLApp:
+class Application:
     def __init__(self):
-        pg.init()
-        
-        pg.display.gl_set_attribute(pg.GL_CONTEXT_MAJOR_VERSION, 3)
-        pg.display.gl_set_attribute(pg.GL_CONTEXT_MINOR_VERSION, 3)
-        pg.display.gl_set_attribute(pg.GL_CONTEXT_PROFILE_MASK, pg.GL_CONTEXT_PROFILE_CORE)
-        pg.display.set_mode((1024, 768), pg.OPENGL|pg.DOUBLEBUF)
+        self._run = False
 
-        self.clock = pg.time.Clock()
-        self.Ctl = Controller()
+
+    def init(self):
+        pg.init()
 
         pg.event.set_grab(True)
         pg.mouse.set_visible(False)
 
+        pg.display.gl_set_attribute(pg.GL_CONTEXT_MAJOR_VERSION, 3)
+        pg.display.gl_set_attribute(pg.GL_CONTEXT_MINOR_VERSION, 3)
+        pg.display.gl_set_attribute(pg.GL_CONTEXT_PROFILE_MASK, pg.GL_CONTEXT_PROFILE_CORE)
 
-    def SetupRender(self):
+        pg.display.set_mode(config.WINDOW_RES, pg.OPENGL | pg.DOUBLEBUF)
+
         glClearColor(0.1, 0.1, 0.1, 1)
         glEnable(GL_DEPTH_TEST)
 
-        TestCxt = TestCubeCreateContext()
-        self.TestCube = CubeMesh()
-        self.TestCube.Setup(TestCxt)
-        
-        # Load texture
-        self.TextureHandle = LoadTexture("Pic/Wall.png")
-        if self.TextureHandle == 0:
-            raise RuntimeError(f"Load Pic Wall failed")
+        self._clock = pg.time.Clock()
 
-        self.TextureHandle1 = LoadTexture("Pic/Rock.png")
-        if self.TextureHandle1 == 0:
-            raise RuntimeError(f"Load Pic Rock failed")
+        self._run = True
 
-        self.Scene = Scene()
-        self.Scene.BuildChunk()
+        self._texture_mgr = texture_mgr.TextureMgr(16, 16, 256)
+        self._texture_mgr.init()
+
+        self._grass = block_type.BlockType(self._texture_mgr, "grass", {"top": "grass", "bottom": "dirt", "sides": "grass_side"})
+
+        self._texture_mgr.gen_mipmap()
+
+        #上传数据
+        self._vao = glGenVertexArrays(1)
+        glBindVertexArray(self._vao)
+
+        #定点数据
+        self._vertices_bo = glGenBuffers(1)
+        glBindBuffer(GL_ARRAY_BUFFER, self._vertices_bo)
+        glBufferData(GL_ARRAY_BUFFER, self._grass.vertices.nbytes, self._grass.vertices.ptr, GL_STATIC_DRAW)
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * glm.sizeof(glm.float32), None)
+        glEnableVertexAttribArray(0)
+        #纹理坐标
+        self._tex_coord_bo = glGenBuffers(1)
+        glBindBuffer(GL_ARRAY_BUFFER, self._tex_coord_bo)
+        glBufferData(GL_ARRAY_BUFFER, self._grass.texcoord.nbytes, self._grass.texcoord.ptr, GL_STATIC_DRAW)
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * glm.sizeof(glm.float32), None)
+        glEnableVertexAttribArray(1)
+        #数组数据
+        self._ibo = glGenBuffers(1)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self._ibo)
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, self._grass.indices.nbytes, self._grass.indices.ptr, GL_STATIC_DRAW)
+
+        self._shader = shader.Shader("shaders/vertex_shader.vs", "shaders/fragment_shader.fs")
+        self._shader.use()
+
+        self._shader_sampler_location = self._shader.get_uniform("texture_array_sampler")
+
+        self._camera = camera.Camera()
+        self._camera.bind_shader(self._shader)
+
+        self._controller = controller.Controller()
+        self._controller.bind_camera(self._camera)
         
-        
-    def BeginRender(self):
+
+    def run(self):
+        while self._run:
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
+                    self._run = False
+            
+            delta = self._clock.tick()
+
+            self._update(delta)
+
+            self._begin_render()
+            self._draw(delta)
+            self._end_render()
+
+
+    def _update(self, delta):
+        self._controller.update(delta)
+
+    def _begin_render(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-        glBindVertexArray(0)
-
-
-    def EndRender(self):
+    def _end_render(self):
         pg.display.flip()
 
 
-    def Draw(self):
+    def _draw(self, delta):
+        self._shader.use()
 
-        CubePositions = [
-        glm.vec3( 0.0,  0.0,  0.0),
-        glm.vec3( 2.0,  5.0, -15.0),
-        glm.vec3(-1.5, -2.2, -2.5),
-        glm.vec3(-3.8, -2.0, -12.3),
-        glm.vec3( 2.4, -0.4, -3.5),
-        glm.vec3(-1.7,  3.0, -7.5),
-        glm.vec3( 1.3, -2.0, -2.5),
-        glm.vec3( 1.5,  2.0, -2.5),
-        glm.vec3( 1.5,  0.2, -1.5),
-        glm.vec3(-1.3,  1.0, -1.5)
-        ]
-
-        # 使用Shader中的unifor变量一定要先use shader
-        self.TestCube.Program.Use()
-        self.TestCube.Program.Uniform1i("TextureUnit0", 0)
-        self.TestCube.Program.Uniform1i("TextureUnit1", 1)
-
-        # Bind texture
         glActiveTexture(GL_TEXTURE0)
-        glBindTexture(GL_TEXTURE_2D, self.TextureHandle)
+        glBindTexture(GL_TEXTURE_2D_ARRAY, self._texture_mgr.texture_array)
+        glUniform1i(self._shader_sampler_location, 0)
 
-        glActiveTexture(GL_TEXTURE1)
-        glBindTexture(GL_TEXTURE_2D, self.TextureHandle1)
+        glBindVertexArray(self._vao)
+        glDrawElements(GL_TRIANGLES, len(self._grass.indices), GL_UNSIGNED_INT, None)
 
-        for i in range(len(CubePositions)):
-            
-            Model = glm.mat4(1.0)
 
-            Rotation = pg.time.get_ticks() / 1000
-            Model = glm.translate(Model, CubePositions[i])
- 
-            self.TestCube.Program.UniformMat4fv("Model", Model)
-  
-            self.TestCube.Render()
+    def exit(self):
+        if not self._run:
+            return
         
-
-        self.TestCube.Program.UniformMat4fv("View", self.Ctl.Camare.ViewMat)
-        self.TestCube.Program.UniformMat4fv("Projection", self.Ctl.Camare.ProjecMat)
-
-
-    def Draw2(self):
-        self.Scene.Render()
-
-    def Run(self):
-        Running = True
-
-        while Running:
-            for event in pg.event.get():
-                if event.type == pg.QUIT:
-                    Running = False
-
-            delta = self.clock.tick()
-            self.Ctl.Update(delta)
-
-            self.BeginRender()
-
-            #self.Draw()
-            self.Draw2()
-
-            self.EndRender()
-
-            #self.clock.tick(60)
-
-
-    def Finish(self):
-        # Clean up textures
-        if hasattr(self, 'TextureHandle') and self.TextureHandle > 0:
-            glDeleteTextures(1, (self.TextureHandle,))
-        
-        if hasattr(self, 'TextureHandle1') and self.TextureHandle1 > 0:
-            glDeleteTextures(1, (self.TextureHandle1,))
-        
-        # Clean up mesh resources (VAO, VBO are managed by TestCube)
-        if hasattr(self, 'TestCube') and hasattr(self.TestCube, 'VAO'):
-            glDeleteVertexArrays(1, (self.TestCube.VAO,))
-        
-        # Clean up shader program
-        if hasattr(self, 'TestCube') and hasattr(self.TestCube, 'Program'):
-            self.TestCube.Program.Release()
-
         pg.quit()
 
 
-
 if __name__ == "__main__":
-
     try:
-        app = SDLApp()
+        app = Application()
 
-        app.SetupRender()
+        app.init()
 
-        app.Run()
+        app.run()
+
+        app.exit()
     except Exception as e:
-        print(str(e))
-
-    finally:
-        app.Finish()
-        
+        print(f"{e}")

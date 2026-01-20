@@ -1,28 +1,46 @@
-
 import glm
 
-#相机相关
-SCREEN_WIDHT = 1024
-SCREEN_HEIGHT = 768
+# 窗口配置
+WINDOW_RES = (1024, 768)
+
+
+# 控制配置
+MOVE_SPEED = 0.005
+MOUSE_SENSITIVITY = 0.2
+PITCH_MAX = 89
+
+# 相机配置
 NEAR_CULL = 0.1
 FAR_CULL = 2000.0
 FOV_DEG = 50
 V_FOV = glm.radians(FOV_DEG)  # vertical FOV
-PITCH_MAX = glm.radians(89)
-
-# 角色相关
-MOVE_SPEED = 0.005
 
 
-# 一个Chunk自身的配置相关
-CHUNK_SIZE = 32 # 每个Chunk包含多少个体素
-H_CHUNK_SIZE = CHUNK_SIZE // 2
-CHUNK_AREA = CHUNK_SIZE * CHUNK_SIZE
-CHUNK_VOL = CHUNK_AREA * CHUNK_SIZE
+# 物体数据
+# fmt: off
+vertex_positions = glm.array(glm.float32,
+	 0.5,  0.5,  0.5,  0.5, -0.5,  0.5,  0.5, -0.5, -0.5,  0.5,  0.5, -0.5,
+	-0.5,  0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5,  0.5, -0.5,  0.5,  0.5,
+	-0.5,  0.5,  0.5, -0.5,  0.5, -0.5,  0.5,  0.5, -0.5,  0.5,  0.5,  0.5,
+	-0.5, -0.5,  0.5, -0.5, -0.5, -0.5,  0.5, -0.5, -0.5,  0.5, -0.5,  0.5,
+	-0.5,  0.5,  0.5, -0.5, -0.5,  0.5,  0.5, -0.5,  0.5,  0.5,  0.5,  0.5,
+	 0.5,  0.5, -0.5,  0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5,  0.5, -0.5,
+)
 
-# 场景构造相关，一个世界有多少个Chunk
-WORLD_CHUNK_W, WORLD_CHUNK_H = 10, 3
-WORLD_CHUNK_D = WORLD_CHUNK_W
-WORLD_AREA = WORLD_CHUNK_W * WORLD_CHUNK_D
-WORLD_VOL = WORLD_AREA * WORLD_CHUNK_H
+tex_coords = glm.array(glm.float32,
+	0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0,
+	0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0,
+	0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0,
+	0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0,
+	0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0,
+	0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0,
+)
 
+indices = glm.array(glm.uint32,
+	 0,  1,  2,  0,  2,  3, # right
+	 4,  5,  6,  4,  6,  7, # left
+	 8,  9, 10,  8, 10, 11, # top
+	12, 13, 14, 12, 14, 15, # bottom
+	16, 17, 18, 16, 18, 19, # front
+	20, 21, 22, 20, 22, 23, # back
+)
