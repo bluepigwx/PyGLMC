@@ -10,6 +10,7 @@ class BlockType:
         self.vertices = config.vertex_positions
         self.indices = config.indices
         self.texcoord = glm.array(config.tex_coords)
+        self.shading_values = config.shading_values
 
         def set_block_face(face_id, tex_layer):
             """

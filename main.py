@@ -56,6 +56,12 @@ class Application:
         glBufferData(GL_ARRAY_BUFFER, self._grass.texcoord.nbytes, self._grass.texcoord.ptr, GL_STATIC_DRAW)
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * glm.sizeof(glm.float32), None)
         glEnableVertexAttribArray(1)
+        #光照数据
+        self._shading_value_bo = glGenBuffers(1)
+        glBindBuffer(GL_ARRAY_BUFFER, self._shading_value_bo)
+        glBufferData(GL_ARRAY_BUFFER, self._grass.shading_values.nbytes, self._grass.shading_values.ptr, GL_STATIC_DRAW)
+        glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, 1 * glm.sizeof(glm.float32), None)
+        glEnableVertexAttribArray(2)
         #数组数据
         self._ibo = glGenBuffers(1)
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self._ibo)
