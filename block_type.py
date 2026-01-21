@@ -1,5 +1,5 @@
 import config
-import glm
+import numpy as np
 
 class BlockType:
     """
@@ -7,17 +7,18 @@ class BlockType:
     """
     def __init__(self, texture_mgr, name="unknow", block_face_textures={"all":"cobblestone"}):
         self._name = name
-        self.vertices = config.vertex_positions
+        self.vertices = config.template_vertex_positions#config.vertex_positions
         self.indices = config.indices
-        self.texcoord = glm.array(config.tex_coords)
-        self.shading_values = config.shading_values
+        self.texcoord = config.template_tex_coords.copy() #np.array(config.tex_coords)
+        self.shading_values = config.template_shading_values
 
         def set_block_face(face_id, tex_layer):
             """
             设置方块的face_id使用哪个tex_layer
             """
-            for i in range(4):
-                self.texcoord[face_id * 12 + i * 3 + 2] = tex_layer
+            self.texcoord[face_id] = self.texcoord[face_id].copy()
+            for vertex in range(4):
+                self.texcoord[face_id][vertex * 3 + 2] = tex_layer
 
         for face in block_face_textures:
             texture_name = block_face_textures[face]

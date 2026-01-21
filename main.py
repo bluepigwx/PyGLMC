@@ -1,12 +1,13 @@
 import pygame as pg
 from OpenGL.GL import *
-import glm
 import config
 import texture_mgr
 import block_type
 import shader
 import camera
 import controller
+import numpy as np
+import world
 
 
 class Application:
@@ -30,42 +31,9 @@ class Application:
         glEnable(GL_DEPTH_TEST)
 
         self._clock = pg.time.Clock()
-
         self._run = True
 
-        self._texture_mgr = texture_mgr.TextureMgr(16, 16, 256)
-        self._texture_mgr.init()
-
-        self._grass = block_type.BlockType(self._texture_mgr, "grass", {"top": "grass", "bottom": "dirt", "sides": "grass_side"})
-
-        self._texture_mgr.gen_mipmap()
-
-        #上传数据
-        self._vao = glGenVertexArrays(1)
-        glBindVertexArray(self._vao)
-
-        #定点数据
-        self._vertices_bo = glGenBuffers(1)
-        glBindBuffer(GL_ARRAY_BUFFER, self._vertices_bo)
-        glBufferData(GL_ARRAY_BUFFER, self._grass.vertices.nbytes, self._grass.vertices.ptr, GL_STATIC_DRAW)
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * glm.sizeof(glm.float32), None)
-        glEnableVertexAttribArray(0)
-        #纹理坐标
-        self._tex_coord_bo = glGenBuffers(1)
-        glBindBuffer(GL_ARRAY_BUFFER, self._tex_coord_bo)
-        glBufferData(GL_ARRAY_BUFFER, self._grass.texcoord.nbytes, self._grass.texcoord.ptr, GL_STATIC_DRAW)
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * glm.sizeof(glm.float32), None)
-        glEnableVertexAttribArray(1)
-        #光照数据
-        self._shading_value_bo = glGenBuffers(1)
-        glBindBuffer(GL_ARRAY_BUFFER, self._shading_value_bo)
-        glBufferData(GL_ARRAY_BUFFER, self._grass.shading_values.nbytes, self._grass.shading_values.ptr, GL_STATIC_DRAW)
-        glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, 1 * glm.sizeof(glm.float32), None)
-        glEnableVertexAttribArray(2)
-        #数组数据
-        self._ibo = glGenBuffers(1)
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self._ibo)
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, self._grass.indices.nbytes, self._grass.indices.ptr, GL_STATIC_DRAW)
+        self._world = world.World()
 
         self._shader = shader.Shader("shaders/vertex_shader.vs", "shaders/fragment_shader.fs")
         self._shader.use()
@@ -97,8 +65,10 @@ class Application:
     def _update(self, delta):
         self._controller.update(delta)
 
+
     def _begin_render(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
 
     def _end_render(self):
         pg.display.flip()
@@ -108,11 +78,10 @@ class Application:
         self._shader.use()
 
         glActiveTexture(GL_TEXTURE0)
-        glBindTexture(GL_TEXTURE_2D_ARRAY, self._texture_mgr.texture_array)
+        glBindTexture(GL_TEXTURE_2D_ARRAY, self._world.texture_mgr.texture_array)
         glUniform1i(self._shader_sampler_location, 0)
 
-        glBindVertexArray(self._vao)
-        glDrawElements(GL_TRIANGLES, len(self._grass.indices), GL_UNSIGNED_INT, None)
+        self._world.draw()
 
 
     def exit(self):
