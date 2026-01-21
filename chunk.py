@@ -90,18 +90,22 @@ class Chunk:
                             self._world_position_offset[2] + c_z,
                         )
 
-                        if not self._world.get_block_number(wx + 1, wy, wz):
-                            self._add_face(0, block_type, wx, wy, wz)
-                        if not self._world.get_block_number(wx - 1, wy, wz):
-                            self._add_face(1, block_type, wx, wy, wz)
-                        if not self._world.get_block_number(wx, wy + 1, wz):
-                            self._add_face(2, block_type, wx, wy, wz)
-                        if not self._world.get_block_number(wx, wy - 1, wz):
-                            self._add_face(3, block_type, wx, wy, wz)
-                        if not self._world.get_block_number(wx, wy, wz + 1):
-                            self._add_face(4, block_type, wx, wy, wz)
-                        if not self._world.get_block_number(wx, wy, wz - 1):
-                            self._add_face(5, block_type, wx, wy, wz)
+                        if block_type.is_cube:
+                            if not self._world.get_block_number(wx + 1, wy, wz):
+                                self._add_face(0, block_type, wx, wy, wz)
+                            if not self._world.get_block_number(wx - 1, wy, wz):
+                                self._add_face(1, block_type, wx, wy, wz)
+                            if not self._world.get_block_number(wx, wy + 1, wz):
+                                self._add_face(2, block_type, wx, wy, wz)
+                            if not self._world.get_block_number(wx, wy - 1, wz):
+                                self._add_face(3, block_type, wx, wy, wz)
+                            if not self._world.get_block_number(wx, wy, wz + 1):
+                                self._add_face(4, block_type, wx, wy, wz)
+                            if not self._world.get_block_number(wx, wy, wz - 1):
+                                self._add_face(5, block_type, wx, wy, wz)
+                        else:
+                            for i in range(len(block_type.vertices)):
+                                self._add_face(i, block_type, wx, wy, wz)
 
         # 啥都没生成出来，是有可能的，例如chunk被四面八方的chunk给包围住了并且不留空隙        
         if len(self._mesh_indicates) == 0:

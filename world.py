@@ -3,6 +3,8 @@ import chunk
 import config
 import texture_mgr
 import random
+import models.plant
+import models.cactus
 
 
 class World:
@@ -20,28 +22,37 @@ class World:
         self.block_types.append(block_type.BlockType(self.texture_mgr, "sand", {"all": "sand"}))
         self.block_types.append(block_type.BlockType(self.texture_mgr, "planks", {"all": "planks"}))
         self.block_types.append(block_type.BlockType(self.texture_mgr, "log", {"top": "log_top", "bottom": "log_top", "sides": "log_side"}))
-
+        self.block_types.append(block_type.BlockType(self.texture_mgr, "daisy", {"all": "daisy"}, models.plant))
+        self.block_types.append(block_type.BlockType(self.texture_mgr, "rose", {"all": "rose"}, models.plant))
+        self.block_types.append(block_type.BlockType(self.texture_mgr, "cactus", {"top": "cactus_top", "bottom": "cactus_bottom", "sides": "cactus_side"}, models.cactus,))
+        self.block_types.append(block_type.BlockType(self.texture_mgr, "dead_bush", {"all": "dead_bush"}, models.plant))
+        
         self.texture_mgr.gen_mipmap()
 
         self._chunks = {}
 
-        for x in range(8):
-            for z in range(8):
-                chunk_position = (x - 4, -1, z - 4)
+        for x in range(2):
+            for z in range(2):
+                chunk_position = (x - 1, -1, z - 1)
 
                 new_chunk = chunk.Chunk(self, chunk_position)
 
                 for i in range(config.CHUNK_WIDHT):
                     for j in range(config.CHUNK_HEIGHT):
                         for k in range(config.CHUNK_LENGHTH):
-                            if j > 13:
-                                new_chunk.blocks[i][j][k] = random.choice([0, 3])
+                            if j == 15:
+                                new_chunk.blocks[i][j][k] = random.choice([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 12, 11])
+                            elif j == 14:
+                                new_chunk.blocks[i][j][k] = random.choice([6, 2, 2, 2, 2, 2])
+                            elif j >12:
+                                new_chunk.blocks[i][j][k] = random.choice([0, 6])
                             else:
-                                new_chunk.blocks[i][j][k] = random.choice([0, 0, 1])
+                                new_chunk.blocks[i][j][k] = random.choice([0, 0, 5])
+
                 
                 self._chunks[chunk_position] = new_chunk
 
-        for pos, c in self._chunks.items():
+        for _, c in self._chunks.items():
             c.update_mesh()
 
 
@@ -67,7 +78,7 @@ class World:
 
 
     def draw(self):
-        for pos, c in self._chunks.items():
+        for _, c in self._chunks.items():
             c.draw()
 
 

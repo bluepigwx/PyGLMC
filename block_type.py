@@ -1,21 +1,32 @@
 import config
-import numpy as np
+import models.cube
+
+
+class BlockTypeException(Exception):
+    def __init__(self, message):
+        super().__init__(message)
+        self.message = message
+
 
 class BlockType:
     """
     方块的蓝图定义类
     """
-    def __init__(self, texture_mgr, name="unknow", block_face_textures={"all":"cobblestone"}):
+    def __init__(self, texture_mgr, name="unknow", block_face_textures={"all":"cobblestone"}, model=models.cube):
         self._name = name
-        self.vertices = config.template_vertex_positions#config.vertex_positions
-        self.indices = config.indices
-        self.texcoord = config.template_tex_coords.copy() #np.array(config.tex_coords)
-        self.shading_values = config.template_shading_values
+        self.vertices = model.vertex_positions
+        self.texcoord = model.tex_coords.copy()
+        self.shading_values = model.shading_values
+        self.transparent = model.transparent
+        self.is_cube = model.is_cube
 
         def set_block_face(face_id, tex_layer):
             """
             设置方块的face_id使用哪个tex_layer
             """
+            if face_id >= len(self.texcoord):
+                return
+
             self.texcoord[face_id] = self.texcoord[face_id].copy()
             for vertex in range(4):
                 self.texcoord[face_id][vertex * 3 + 2] = tex_layer
