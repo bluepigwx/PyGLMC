@@ -7,6 +7,7 @@ import controller
 import world
 import hit
 import math
+import glm
 
 
 class Application:
@@ -62,6 +63,26 @@ class Application:
                         self._mouse_grabbed = not self._mouse_grabbed
                         pg.event.set_grab(self._mouse_grabbed)
                         pg.mouse.set_visible(not self._mouse_grabbed)
+                    elif event.key == pg.K_h:
+                        self._controller._position = glm.vec3(0, 1, 10)
+                    elif event.key == pg.K_1:
+                        self.holding = 1
+                    elif event.key == pg.K_2:
+                        self.holding = 2
+                    elif event.key == pg.K_3:
+                        self.holding = 3
+                    elif event.key == pg.K_4:
+                        self.holding = 4
+                    elif event.key == pg.K_5:
+                        self.holding = 5
+                    elif event.key == pg.K_6:
+                        self.holding = 6
+                    elif event.key == pg.K_7:
+                        self.holding = 1
+                    elif event.key == pg.K_7:
+                        self.holding = 1
+                    elif event.key == pg.K_8:
+                        self.holding = 8
             
             delta = self._clock.tick()
 
