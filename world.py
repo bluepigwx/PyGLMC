@@ -5,6 +5,7 @@ import texture_mgr
 import random
 import models.plant
 import models.cactus
+import math
 
 
 class World:
@@ -29,7 +30,7 @@ class World:
         
         self.texture_mgr.gen_mipmap()
 
-        self._chunks = {}
+        self.chunks = {}
 
         for x in range(2):
             for z in range(2):
@@ -41,18 +42,19 @@ class World:
                     for j in range(config.CHUNK_HEIGHT):
                         for k in range(config.CHUNK_LENGHTH):
                             if j == 15:
-                                new_chunk.blocks[i][j][k] = random.choice([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 12, 11])
+                                new_chunk.blocks[i][j][k] = random.choices([0, 9, 10], [20, 2, 1])[0]
                             elif j == 14:
-                                new_chunk.blocks[i][j][k] = random.choice([6, 2, 2, 2, 2, 2])
-                            elif j >12:
-                                new_chunk.blocks[i][j][k] = random.choice([0, 6])
+                                new_chunk.blocks[i][j][k] =2
+                            elif j >10:
+                                new_chunk.blocks[i][j][k] = 4
                             else:
-                                new_chunk.blocks[i][j][k] = random.choice([0, 0, 5])
+                                new_chunk.blocks[i][j][k] = 5
 
                 
-                self._chunks[chunk_position] = new_chunk
+                self.chunks[chunk_position] = new_chunk
 
-        for _, c in self._chunks.items():
+        for _, c in self.chunks.items():
+            c.update_subchunk_mesh()
             c.update_mesh()
 
 
@@ -70,15 +72,99 @@ class World:
 
         # 检查 chunk 是否存在，如果不存在返回 0（空气）
         chunk_pos = (cx, cy, cz)
-        if chunk_pos not in self._chunks:
+        if chunk_pos not in self.chunks:
             return 0
         
-        cur_chunk = self._chunks[chunk_pos]
+        cur_chunk = self.chunks[chunk_pos]
         return cur_chunk.blocks[bx][by][bz]
+    
+    
+    def get_chunk_position(self, wposition):
+        """
+        世界坐标到chunk之间的转换
+        """
+        wx, wy, wz = wposition
+        return (
+            math.floor(wx / config.CHUNK_WIDHT),
+            math.floor(wy / config.CHUNK_HEIGHT),
+            math.floor(wz / config.CHUNK_LENGHTH)
+        )
+        
+        
+    def get_block_pos_in_chunk(self, wpostion):
+        """
+        获得block在自己所在chunk中的相对位置
+        """
+        wx, wy, wz = wpostion
+        return (
+            int(wx % config.CHUNK_WIDHT),
+            int(wy % config.CHUNK_HEIGHT),
+            int(wz % config.CHUNK_LENGHTH)
+        )
+        
+    
+    def is_opaque_block(self, wposition):
+        """
+        指定世界坐标的block是否为不透明体
+        """
+        wx, wy, wz = wposition
+        block_num = self.get_block_number(wx, wy, wz)
+        
+        block_type = self.block_types[block_num]
+        if not block_type:
+            return False
+        
+        return not block_type.transparent
+    
+    
+    def set_block(self, wposition, block_num):
+        """
+        外部修改block的接口
+        """
+        wx, wy, wz = wposition
+        
+        chunk_position = self.get_chunk_position(wposition)
+        if chunk_position not in self.chunks:
+            if block_num == 0:
+                return # 在虚空位置删除方块忽略
+            
+            #创建新的chunk
+            self.chunks[chunk_position] = chunk.Chunk(self, chunk_position)
+            
+        if self.get_block_number(wx, wy, wz) == block_num:
+            return
+        
+        blx, bly, blz = self.get_block_pos_in_chunk(wposition)
+        self.chunks[chunk_position].blocks[blx][bly][blz] = block_num
+        self.chunks[chunk_position].update_at_position((wx, wy, wz))
+        self.chunks[chunk_position].update_mesh()
+        
+        cx, cy, cz = chunk_position
+        # 如果修改到邻居chunk了，那么相邻的chunk也需要作出修改
+        def try_update_chunk_at_position(chunk_position, position):
+            if chunk_position in self.chunks:
+                self.chunks[chunk_position].update_at_position(position)
+                self.chunks[chunk_position].update_mesh()
+
+        if blx == config.CHUNK_WIDHT - 1:
+            try_update_chunk_at_position((cx + 1, cy, cz), (wx + 1, wy, wz))
+        if blx == 0:
+            try_update_chunk_at_position((cx - 1, cy, cz), (wx - 1, wy, wz))
+
+        if bly == config.CHUNK_HEIGHT - 1:
+            try_update_chunk_at_position((cx, cy + 1, cz), (wx, wy + 1, wz))
+        if bly == 0:
+            try_update_chunk_at_position((cx, cy - 1, cz), (wx, wy - 1, wz))
+
+        if blz == config.CHUNK_LENGHTH - 1:
+            try_update_chunk_at_position((cx, cy, cz + 1), (wx, wy, wz + 1))
+        if blz == 0:
+            try_update_chunk_at_position((cx, cy, cz - 1), (wx, wy, wz - 1))
+
 
 
     def draw(self):
-        for _, c in self._chunks.items():
+        for _, c in self.chunks.items():
             c.draw()
 
 

@@ -1,15 +1,17 @@
 import config
 from OpenGL.GL import *
 import numpy as np
+import subchunk
+import math
 
 
 class Chunk:
     def __init__(self, world, position):
-        self._position = position
-        self._world_position_offset = (
-            self._position[0] * config.CHUNK_WIDHT,
-            self._position[1] * config.CHUNK_HEIGHT,
-            self._position[2] * config.CHUNK_LENGHTH
+        self.position = position
+        self.world_position_offset = (
+            self.position[0] * config.CHUNK_WIDHT,
+            self.position[1] * config.CHUNK_HEIGHT,
+            self.position[2] * config.CHUNK_LENGHTH
         )
 
         self._world = world
@@ -33,6 +35,16 @@ class Chunk:
         self._shading_vbo = glGenBuffers(1)
         # 索引缓冲
         self._indicat_vbo = glGenBuffers(1)
+        # subchunks
+        self._subchunks = {} # position -- subchunk
+        sub_x = int(config.CHUNK_WIDHT / config.SUBCHUNK_WIDTH)
+        sub_y = int(config.CHUNK_HEIGHT / config.SUBCHUNK_HEIGHT)
+        sub_z = int(config.CHUNK_LENGHTH / config.SUBCHUNK_LENGTH)
+        
+        for x in range(sub_x):
+            for y in range(sub_y):
+                for z in range(sub_z):
+                    self._subchunks[(x, y, z)] = subchunk.SubChunk(self._world, self, (x, y, z))
 
 
     def _init_raw_data(self):
@@ -43,69 +55,21 @@ class Chunk:
         self._mesh_index_counter = 0
         self._mesh_indicates = []
 
-    
-    def _add_face(self, faceid, block_type, wx, wy, wz):
-        """
-        将blocktype蓝图实例化为具体的方块
-        """
-
-        # 实例化定点
-        vertex_positions = block_type.vertices[faceid].copy() #config.template_vertex_positions[faceid].copy()
-
-        for i in range(4):
-            vertex_positions[i*3 + 0] += wx
-            vertex_positions[i*3 + 1] += wy
-            vertex_positions[i*3 + 2] += wz
-
-        self._raw_mesh_vertex_position.extend(vertex_positions)
-
-        # 实例化索引
-        indices = [0, 1, 2, 0, 2, 3]
-        for i in range(6):
-            indices[i] += self._mesh_index_counter
-
-        self._mesh_indicates.extend(indices)
-        self._mesh_index_counter += 4
-
-        # 实例化纹理坐标
-        self._raw_mesh_tex_coord.extend(block_type.texcoord[faceid])
-        # 实例化光照
-        self._raw_mesh_shading_value.extend(block_type.shading_values[faceid])
-
 
     def update_mesh(self):
-        for c_x in range(config.CHUNK_WIDHT):
-            for c_y in range(config.CHUNK_HEIGHT):
-                for c_z in range(config.CHUNK_LENGHTH):
-                    block_number = self.blocks[c_x][c_y][c_z]
 
-                    if block_number:
-                        block_type = self._world.block_types[block_number]
-                        if not block_type:
-                            continue
-
-                        wx, wy, wz = (
-                            self._world_position_offset[0] + c_x,
-                            self._world_position_offset[1] + c_y,
-                            self._world_position_offset[2] + c_z,
-                        )
-
-                        if block_type.is_cube:
-                            if not self._world.get_block_number(wx + 1, wy, wz):
-                                self._add_face(0, block_type, wx, wy, wz)
-                            if not self._world.get_block_number(wx - 1, wy, wz):
-                                self._add_face(1, block_type, wx, wy, wz)
-                            if not self._world.get_block_number(wx, wy + 1, wz):
-                                self._add_face(2, block_type, wx, wy, wz)
-                            if not self._world.get_block_number(wx, wy - 1, wz):
-                                self._add_face(3, block_type, wx, wy, wz)
-                            if not self._world.get_block_number(wx, wy, wz + 1):
-                                self._add_face(4, block_type, wx, wy, wz)
-                            if not self._world.get_block_number(wx, wy, wz - 1):
-                                self._add_face(5, block_type, wx, wy, wz)
-                        else:
-                            for i in range(len(block_type.vertices)):
-                                self._add_face(i, block_type, wx, wy, wz)
+        self._init_raw_data()
+        
+        for _, subchunk in self._subchunks.items():
+            self._raw_mesh_vertex_position.extend(subchunk.mesh_vertex_position)
+            self._raw_mesh_tex_coord.extend(subchunk.mesh_tex_coord)
+            self._raw_mesh_shading_value.extend(subchunk.mesh_shading_value)
+            
+            mesh_indices = [index + self._mesh_index_counter for index in subchunk.mesh_indicates]
+            
+            self._mesh_indicates.extend(mesh_indices)
+            self._mesh_index_counter += subchunk.mesh_index_counter
+        
 
         # 啥都没生成出来，是有可能的，例如chunk被四面八方的chunk给包围住了并且不留空隙        
         if len(self._mesh_indicates) == 0:
@@ -135,14 +99,57 @@ class Chunk:
         indecates = np.array(self._mesh_indicates, np.uint32)
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self._indicat_vbo)
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, indecates.nbytes, indecates, GL_STATIC_DRAW)
+        
+        
+    def update_subchunk_mesh(self):
+        for _, subchunk in self._subchunks.items():
+            subchunk.update_mesh()
+    
+    
+    def update_at_position(self, position):
+        x, y, z = position
+
+        lx = int(x % config.SUBCHUNK_WIDTH)
+        ly = int(y % config.SUBCHUNK_HEIGHT)
+        lz = int(z % config.SUBCHUNK_LENGTH)
+
+        clx, cly, clz = self._world.get_block_pos_in_chunk(position)
+
+        sx = math.floor(clx / config.SUBCHUNK_WIDTH)
+        sy = math.floor(cly / config.SUBCHUNK_HEIGHT)
+        sz = math.floor(clz / config.SUBCHUNK_LENGTH)
+
+        self._subchunks[(sx, sy, sz)].update_mesh()
+
+        def try_update_subchunk_mesh(subchunk_position):
+            if subchunk_position in self._subchunks:
+                self._subchunks[subchunk_position].update_mesh()
+
+        if lx == config.SUBCHUNK_WIDTH - 1:
+            try_update_subchunk_mesh((sx + 1, sy, sz))
+        if lx == 0:
+            try_update_subchunk_mesh((sx - 1, sy, sz))
+
+        if ly == config.SUBCHUNK_HEIGHT - 1:
+            try_update_subchunk_mesh((sx, sy + 1, sz))
+        if ly == 0:
+            try_update_subchunk_mesh((sx, sy - 1, sz))
+
+        if lz == config.SUBCHUNK_LENGTH - 1:
+            try_update_subchunk_mesh((sx, sy, sz + 1))
+        if lz == 0:
+            try_update_subchunk_mesh((sx, sy, sz - 1))
 
     
     def draw(self):
         if len(self._mesh_indicates) == 0:
             return
         
+        #glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+        
         glBindVertexArray(self._vao)
         glDrawElements(GL_TRIANGLES, len(self._mesh_indicates), GL_UNSIGNED_INT, None)
+        
 
 
 

@@ -1,18 +1,20 @@
 import pygame as pg
 from OpenGL.GL import *
 import config
-import texture_mgr
-import block_type
 import shader
 import camera
 import controller
-import numpy as np
 import world
+import hit
+import math
 
 
 class Application:
     def __init__(self):
         self._run = False
+        
+        self.holding = 7
+        self._mouse_grabbed = True  # 鼠标锁定状态
 
 
     def init(self):
@@ -52,6 +54,14 @@ class Application:
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     self._run = False
+                if event.type == pg.MOUSEBUTTONDOWN:
+                    self._process_mouse_down(event)
+                if event.type == pg.KEYDOWN:
+                    if event.key == pg.K_ESCAPE:
+                        # 切换鼠标锁定状态
+                        self._mouse_grabbed = not self._mouse_grabbed
+                        pg.event.set_grab(self._mouse_grabbed)
+                        pg.mouse.set_visible(not self._mouse_grabbed)
             
             delta = self._clock.tick()
 
@@ -60,6 +70,27 @@ class Application:
             self._begin_render()
             self._draw(delta)
             self._end_render()
+            
+    def _process_mouse_down(self, mouse_event):
+        button = mouse_event.button
+        
+        def hit_callback(cur_block, next_block):
+            if button == 1:
+                #右键
+                print(f"放置方块在 {cur_block}")
+                self._world.set_block(cur_block, self.holding)
+            elif button == 3:
+                #左键
+                print(f"击中方块 {next_block}")
+                self._world.set_block(next_block, 0)
+
+        # 将角度制转换为弧度制
+        rotate_yaw = math.radians(self._controller._yaw)
+        rotate_pitch = math.radians(self._controller._pitch)
+        hit_ray = hit.Hit_ray(self._world, (rotate_yaw, rotate_pitch), self._controller._position)
+        while hit_ray.distance < hit.HIT_RANGE:
+            if hit_ray.step(hit_callback):
+                break
 
 
     def _update(self, delta):
