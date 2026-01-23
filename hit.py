@@ -1,6 +1,6 @@
 import math
 
-HIT_RANGE = 10
+HIT_RANGE = 5
 
 
 class Hit_ray:

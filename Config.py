@@ -19,7 +19,7 @@ V_FOV = glm.radians(FOV_DEG)  # vertical FOV
 
 #Chunk配置
 CHUNK_WIDHT = 16
-CHUNK_HEIGHT = 16
+CHUNK_HEIGHT = 128
 CHUNK_LENGHTH = 16
 
 

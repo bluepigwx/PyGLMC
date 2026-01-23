@@ -13,12 +13,15 @@ class BlockType:
     方块的蓝图定义类
     """
     def __init__(self, texture_mgr, name="unknow", block_face_textures={"all":"cobblestone"}, model=models.cube):
-        self._name = name
+        self.name = name
         self.vertices = model.vertex_positions
         self.texcoord = model.tex_coords.copy()
         self.shading_values = model.shading_values
         self.transparent = model.transparent
         self.is_cube = model.is_cube
+        self.block_face_textures = block_face_textures
+        self.model = model
+        self.glass = model.glass
 
         def set_block_face(face_id, tex_layer):
             """
@@ -36,15 +39,20 @@ class BlockType:
             tex_layer = texture_mgr.add_texture(texture_name)
 
             if face == "all":
-                set_block_face(0, tex_layer)
-                set_block_face(1, tex_layer)
-                set_block_face(2, tex_layer)
-                set_block_face(3, tex_layer)
-                set_block_face(4, tex_layer)
-                set_block_face(5, tex_layer)
+                for i in range(len(self.texcoord)):
+                    set_block_face(i, tex_layer)
             elif face == "sides":
                 set_block_face(0, tex_layer)
                 set_block_face(1, tex_layer)
+                set_block_face(4, tex_layer)
+                set_block_face(5, tex_layer)
+            elif face == "x":
+                set_block_face(0, tex_layer)
+                set_block_face(1, tex_layer)
+            elif face == "y":
+                set_block_face(2, tex_layer)
+                set_block_face(3, tex_layer)
+            elif face == "z":
                 set_block_face(4, tex_layer)
                 set_block_face(5, tex_layer)
             else:

@@ -37,15 +37,19 @@ class Application:
         self._run = True
 
         self._world = world.World()
-
+        print(f"try load map data")
+        self._world.load_map()
+        print(f"try build shaders")
         self._shader = shader.Shader("shaders/vertex_shader.vs", "shaders/fragment_shader.fs")
         self._shader.use()
 
         self._shader_sampler_location = self._shader.get_uniform("texture_array_sampler")
 
+        print(f"init camera")
         self._camera = camera.Camera()
         self._camera.bind_shader(self._shader)
 
+        print(f"init controller")
         self._controller = controller.Controller()
         self._controller.bind_camera(self._camera)
         
@@ -64,7 +68,7 @@ class Application:
                         pg.event.set_grab(self._mouse_grabbed)
                         pg.mouse.set_visible(not self._mouse_grabbed)
                     elif event.key == pg.K_h:
-                        self._controller._position = glm.vec3(0, 1, 10)
+                        self._controller._position = glm.vec3(0, 100, 10)
                     elif event.key == pg.K_1:
                         self.holding = 1
                     elif event.key == pg.K_2:
@@ -78,11 +82,11 @@ class Application:
                     elif event.key == pg.K_6:
                         self.holding = 6
                     elif event.key == pg.K_7:
-                        self.holding = 1
-                    elif event.key == pg.K_7:
-                        self.holding = 1
+                        self.holding = 7
                     elif event.key == pg.K_8:
                         self.holding = 8
+                    elif event.key == pg.K_9:
+                        self.holding = 9
             
             delta = self._clock.tick()
 

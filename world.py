@@ -3,9 +3,9 @@ import chunk
 import config
 import texture_mgr
 import random
-import models.plant
-import models.cactus
+import models
 import math
+import map_data
 
 
 class World:
@@ -13,25 +13,73 @@ class World:
         self.texture_mgr = texture_mgr.TextureMgr(16, 16, 256)
         self.texture_mgr.init()
 
-        # 注册所有的方块类型
         self.block_types = [None] # 0 -- 空气
-        self.block_types.append(block_type.BlockType(self.texture_mgr, "cobblestone", {"all": "cobblestone"}))
-        self.block_types.append(block_type.BlockType(self.texture_mgr, "grass", {"top": "grass", "bottom": "dirt", "sides": "grass_side"}))
-        self.block_types.append(block_type.BlockType(self.texture_mgr, "grass_block", {"all": "grass"}))
-        self.block_types.append(block_type.BlockType(self.texture_mgr, "dirt", {"all": "dirt"}))
-        self.block_types.append(block_type.BlockType(self.texture_mgr, "stone", {"all": "stone"}))
-        self.block_types.append(block_type.BlockType(self.texture_mgr, "sand", {"all": "sand"}))
-        self.block_types.append(block_type.BlockType(self.texture_mgr, "planks", {"all": "planks"}))
-        self.block_types.append(block_type.BlockType(self.texture_mgr, "log", {"top": "log_top", "bottom": "log_top", "sides": "log_side"}))
-        self.block_types.append(block_type.BlockType(self.texture_mgr, "daisy", {"all": "daisy"}, models.plant))
-        self.block_types.append(block_type.BlockType(self.texture_mgr, "rose", {"all": "rose"}, models.plant))
-        self.block_types.append(block_type.BlockType(self.texture_mgr, "cactus", {"top": "cactus_top", "bottom": "cactus_bottom", "sides": "cactus_side"}, models.cactus,))
-        self.block_types.append(block_type.BlockType(self.texture_mgr, "dead_bush", {"all": "dead_bush"}, models.plant))
-        
+        self._load_block_type()
         self.texture_mgr.gen_mipmap()
 
         self.chunks = {}
+        self.map_data = map_data.MapData(self)
+        
+    
+    def load_map(self):
+        print(f"begin load map data...")
+        self.map_data.load()
+        print(f"end load map data...")
+        
+        #也可以自定义生成地图
+        #self._build_custom_chunks()
+        
+        print(f"begin build meshs...")
+        self.build_meshs()
+        print(f"end build meshs...")
+        
 
+        
+    def _load_block_type(self):
+        # parse block type data file
+        blocks_data_file = open("data/blocks.mcpy")
+        blocks_data = blocks_data_file.readlines()
+        blocks_data_file.close()
+
+        for block in blocks_data:
+            if block[0] in ["\n", "#"]:  # skip if empty line or comment
+                continue
+
+            number, props = block.split(":", 1)
+            number = int(number)
+
+			# default block
+            name = "Unknown"
+            model = models.cube
+            texture = {"all": "unknown"}
+
+			# read properties
+            for prop in props.split(","):
+                prop = prop.strip()
+                prop = list(filter(None, prop.split(" ", 1)))
+
+                if prop[0] == "sameas":
+                    sameas_number = int(prop[1])
+                    name = self.block_types[sameas_number].name
+                    texture = dict(self.block_types[sameas_number].block_face_textures)
+                    model = self.block_types[sameas_number].model
+                elif prop[0] == "name":
+                    name = eval(prop[1])
+                elif prop[0][:7] == "texture":
+                    _, side = prop[0].split(".")
+                    texture[side] = prop[1].strip()
+                elif prop[0] == "model":
+                    model = eval(prop[1])
+
+			# add block type
+            _block_type = block_type.BlockType(self.texture_mgr, name, texture, model)
+            if number < len(self.block_types):
+                self.block_types[number] = _block_type
+            else:
+                self.block_types.append(_block_type)
+
+
+    def _build_custom_chunks(self):
         for x in range(2):
             for z in range(2):
                 chunk_position = (x - 1, -1, z - 1)
@@ -50,9 +98,10 @@ class World:
                             else:
                                 new_chunk.blocks[i][j][k] = 5
 
-                
                 self.chunks[chunk_position] = new_chunk
 
+        
+    def build_meshs(self):
         for _, c in self.chunks.items():
             c.update_subchunk_mesh()
             c.update_mesh()
