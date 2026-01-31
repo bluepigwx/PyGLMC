@@ -2,6 +2,9 @@ import nbtlib as nb
 import chunk
 import config
 import base36
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class MapData:
@@ -38,7 +41,7 @@ class MapData:
                         if index < len(chunk_blocks):
                             new_chunk.blocks[x][y][z] = chunk_blocks[index]
                         else:
-                            print(f"chunk_blocks index out of range: {index}, max: {len(chunk_blocks)}, x={x}, y={y}, z={z}")
+                            logger.error(f"chunk_blocks index out of range: {index}, max: {len(chunk_blocks)}, x={x}, y={y}, z={z}")
                             break
     
     

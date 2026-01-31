@@ -2,7 +2,7 @@ import glm
 import numpy as np
 
 # 窗口配置
-WINDOW_RES = (1024, 768)
+WINDOW_RES = (480, 320)
 
 
 # 控制配置

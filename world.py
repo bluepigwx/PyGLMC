@@ -6,7 +6,9 @@ import random
 import models
 import math
 import map_data
+import logging
 
+logger = logging.getLogger(__name__)
 
 class World:
     def __init__(self):
@@ -22,16 +24,16 @@ class World:
         
     
     def load_map(self):
-        print(f"begin load map data...")
+        logger.info(f"begin load map data...")
         self.map_data.load()
-        print(f"end load map data...")
+        logger.info(f"end load map data...")
         
         #也可以自定义生成地图
         #self._build_custom_chunks()
         
-        print(f"begin build meshs...")
+        logger.info(f"begin build meshs...")
         self.build_meshs()
-        print(f"end build meshs...")
+        logger.info(f"end build meshs...")
         
 
         

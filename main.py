@@ -8,7 +8,16 @@ import world
 import hit
 import math
 import glm
+import logging
+import plugin
 
+logging.basicConfig(level=logging.DEBUG,
+                    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+                    handlers=[
+                        logging.StreamHandler()
+                    ])
+
+logger = logging.getLogger("application")
 
 class Application:
     def __init__(self):
@@ -37,21 +46,27 @@ class Application:
         self._run = True
 
         self._world = world.World()
-        print(f"try load map data")
+        
+        logger.info(f"try load map data...")
         self._world.load_map()
-        print(f"try build shaders")
+        logger.info(f"try build shaders...")
         self._shader = shader.Shader("shaders/vertex_shader.vs", "shaders/fragment_shader.fs")
         self._shader.use()
 
         self._shader_sampler_location = self._shader.get_uniform("texture_array_sampler")
 
-        print(f"init camera")
+        logger.info(f"init camera...")
         self._camera = camera.Camera()
         self._camera.bind_shader(self._shader)
 
-        print(f"init controller")
+        logger.info(f"init controller...")
         self._controller = controller.Controller()
         self._controller.bind_camera(self._camera)
+        
+        logger.info(f"init plugin...")
+        self._plugin = plugin.Plugin()
+        self._plugin.init()
+        
         
 
     def run(self):
@@ -102,11 +117,11 @@ class Application:
         def hit_callback(cur_block, next_block):
             if button == 1:
                 #右键
-                print(f"放置方块在 {cur_block}")
+                logger.debug(f"放置方块在 {cur_block}")
                 self._world.set_block(cur_block, self.holding)
             elif button == 3:
                 #左键
-                print(f"击中方块 {next_block}")
+                logger.debug(f"击中方块 {next_block}")
                 self._world.set_block(next_block, 0)
 
         # 将角度制转换为弧度制
@@ -119,6 +134,7 @@ class Application:
 
 
     def _update(self, delta):
+        self._plugin.update()
         self._controller.update(delta)
 
 
@@ -144,6 +160,9 @@ class Application:
         if not self._run:
             return
         
+        if self._plugin:
+            self._plugin.finit()
+        
         pg.quit()
 
 
@@ -157,4 +176,4 @@ if __name__ == "__main__":
 
         app.exit()
     except Exception as e:
-        print(f"{e}")
+        logger.error(f"{e}")
