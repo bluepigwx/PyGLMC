@@ -22,21 +22,14 @@ logger = logging.getLogger("application")
 class Application:
     def __init__(self):
         self._run = False
-        
-        self.holding = 7
-        self._mouse_grabbed = True  # 鼠标锁定状态
 
 
     def init(self):
         pg.init()
 
-        pg.event.set_grab(True)
-        pg.mouse.set_visible(False)
-
         pg.display.gl_set_attribute(pg.GL_CONTEXT_MAJOR_VERSION, 3)
         pg.display.gl_set_attribute(pg.GL_CONTEXT_MINOR_VERSION, 3)
         pg.display.gl_set_attribute(pg.GL_CONTEXT_PROFILE_MASK, pg.GL_CONTEXT_PROFILE_CORE)
-
         pg.display.set_mode(config.WINDOW_RES, pg.OPENGL | pg.DOUBLEBUF)
 
         glClearColor(0.1, 0.1, 0.1, 1)
@@ -60,77 +53,35 @@ class Application:
         self._camera.bind_shader(self._shader)
 
         logger.info(f"init controller...")
-        self._controller = controller.Controller()
+        self._controller = controller.Controller(self._world)
         self._controller.bind_camera(self._camera)
         
         logger.info(f"init plugin...")
-        self._plugin = plugin.Plugin()
+        self._plugin = plugin.Plugin(self._world, self._controller)
         self._plugin.init()
         
+        self._controller.bind_plugin(self._plugin)
         
-
+        
     def run(self):
         while self._run:
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     self._run = False
                 if event.type == pg.MOUSEBUTTONDOWN:
-                    self._process_mouse_down(event)
+                    self._controller.on_mouse_button_down(event.button)
                 if event.type == pg.KEYDOWN:
-                    if event.key == pg.K_ESCAPE:
-                        # 切换鼠标锁定状态
-                        self._mouse_grabbed = not self._mouse_grabbed
-                        pg.event.set_grab(self._mouse_grabbed)
-                        pg.mouse.set_visible(not self._mouse_grabbed)
-                    elif event.key == pg.K_h:
-                        self._controller._position = glm.vec3(0, 100, 10)
-                    elif event.key == pg.K_1:
-                        self.holding = 1
-                    elif event.key == pg.K_2:
-                        self.holding = 2
-                    elif event.key == pg.K_3:
-                        self.holding = 3
-                    elif event.key == pg.K_4:
-                        self.holding = 4
-                    elif event.key == pg.K_5:
-                        self.holding = 5
-                    elif event.key == pg.K_6:
-                        self.holding = 6
-                    elif event.key == pg.K_7:
-                        self.holding = 7
-                    elif event.key == pg.K_8:
-                        self.holding = 8
-                    elif event.key == pg.K_9:
-                        self.holding = 9
+                    self._controller.on_key_down(event.key)
             
             delta = self._clock.tick()
 
             self._update(delta)
 
             self._begin_render()
-            self._draw(delta)
-            self._end_render()
             
-    def _process_mouse_down(self, mouse_event):
-        button = mouse_event.button
-        
-        def hit_callback(cur_block, next_block):
-            if button == 1:
-                #右键
-                logger.debug(f"放置方块在 {cur_block}")
-                self._world.set_block(cur_block, self.holding)
-            elif button == 3:
-                #左键
-                logger.debug(f"击中方块 {next_block}")
-                self._world.set_block(next_block, 0)
-
-        # 将角度制转换为弧度制
-        rotate_yaw = math.radians(self._controller._yaw)
-        rotate_pitch = math.radians(self._controller._pitch)
-        hit_ray = hit.Hit_ray(self._world, (rotate_yaw, rotate_pitch), self._controller._position)
-        while hit_ray.distance < hit.HIT_RANGE:
-            if hit_ray.step(hit_callback):
-                break
+            self._draw(delta)
+            
+            self._end_render()
 
 
     def _update(self, delta):

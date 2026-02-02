@@ -20,6 +20,16 @@ class MapData:
         for x in range(-4, 4):
             for z in range(-4, 4):
                 self._load_chunk((x, 0, z))
+                
+        
+    def build_custom_chunks(self):
+        position = (0,0,0)
+        self.world.chunks[position] = chunk.Chunk(self.world, position)
+        new_chunk = self.world.chunks[position]
+        
+        for x in range(config.CHUNK_WIDHT):
+            for z in range(config.CHUNK_LENGHTH):
+                new_chunk.blocks[x][0][z] = 2
     
     
     def save(self, path=""):

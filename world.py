@@ -25,7 +25,8 @@ class World:
     
     def load_map(self):
         logger.info(f"begin load map data...")
-        self.map_data.load()
+        #self.map_data.load()
+        self.map_data.build_custom_chunks()
         logger.info(f"end load map data...")
         
         #也可以自定义生成地图
@@ -168,10 +169,43 @@ class World:
         return not block_type.transparent
     
     
+    def get_all_blocks(self):
+        """
+        以世界坐标返回所有的block信息
+        """
+        blocks = []
+        
+        try:
+            for k, v in self.chunks.items():
+                c_offset_x = k[0] * config.CHUNK_WIDHT
+                c_offset_y = k[1] * config.CHUNK_HEIGHT
+                c_offset_z = k[2] * config.CHUNK_LENGHTH
+            
+                for x in range(config.CHUNK_WIDHT):
+                    for y in range(config.CHUNK_HEIGHT):
+                        for z in range(config.CHUNK_LENGHTH):
+                            block_type = v.blocks[x][y][z]
+                            if block_type == 0:
+                                continue
+                            
+                            w_x = c_offset_x + x
+                            w_y = c_offset_y + y
+                            w_z = c_offset_z + z
+                        
+                            block_info = {"type":block_type, "pos":[w_x, w_y, w_z]}
+                            blocks.append(block_info)
+                            
+        except Exception as e:
+            logger.error(f"get_all_blocks {e}")
+
+        return blocks
+    
+    
     def set_block(self, wposition, block_num):
         """
         外部修改block的接口
         """
+        logger.debug(f"wposition : {wposition} block_num : {block_num}")
         wx, wy, wz = wposition
         
         chunk_position = self.get_chunk_position(wposition)
@@ -183,10 +217,12 @@ class World:
             self.chunks[chunk_position] = chunk.Chunk(self, chunk_position)
             
         if self.get_block_number(wx, wy, wz) == block_num:
+            logger.debug(f"same block return")
             return
         
         blx, bly, blz = self.get_block_pos_in_chunk(wposition)
         self.chunks[chunk_position].blocks[blx][bly][blz] = block_num
+        logger.debug(f"finish add block at bx:{blx} by:{bly} bz:{blz} block:{block_num}")
         self.chunks[chunk_position].update_at_position((wx, wy, wz))
         self.chunks[chunk_position].update_mesh()
         

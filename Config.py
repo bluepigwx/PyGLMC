@@ -15,6 +15,8 @@ NEAR_CULL = 0.1
 FAR_CULL = 2000.0
 FOV_DEG = 50
 V_FOV = glm.radians(FOV_DEG)  # vertical FOV
+HOME_POS = glm.vec3(10, 2, 10)
+#HOME_POS = glm.vec3(0, 100, 10)
 
 
 #Chunk配置
